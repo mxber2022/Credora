@@ -249,7 +249,7 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                 <p className="text-sm text-gray-300 max-w-2xl mx-auto font-medium leading-relaxed mb-8">
                   Your verified identity unlocks access to undercollateralized PYUSD borrowing
                 </p>
-                <div className="flex items-center justify-center space-x-6">
+                <div className="flex items-center justify-center space-x-6 mb-8">
                   <div className="flex items-center space-x-3 bg-black/30 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-3">
                     <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                     <span className="text-gray-200 text-sm font-medium">Prove income with zkPDF</span>
@@ -259,6 +259,24 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                     <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
                     <span className="text-white font-bold text-sm">Access PYUSD Loans</span>
                   </div>
+                </div>
+                
+                {/* Borrow Button */}
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      console.log('Borrow PYUSD button clicked');
+                      // Navigate to lending page or trigger borrowing flow
+                      window.location.href = '/#lending';
+                    }}
+                    className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-lg rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 group"
+                  >
+                    <span className="mr-3">Borrow PYUSD</span>
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                  </button>
+                  <p className="text-gray-400 text-sm mt-3">
+                    Start with income verification to access PYUSD lending
+                  </p>
                 </div>
               </div>
             </div>
