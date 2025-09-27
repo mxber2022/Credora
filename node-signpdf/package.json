@@ -1,0 +1,32 @@
+{
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vbuch/node-signpdf"
+  },
+  "funding": [
+    {
+      "type": "individual",
+      "url": "https://buymeacoffee.com/vbuch?utm_source=npm-funding-signpdf"
+    }
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=12"
+  },
+  "scripts": {
+    "prepare": "husky install",
+    "build": "lerna run build",
+    "lint": "lerna run lint",
+    "test": "lerna run test"
+  },
+  "devDependencies": {
+    "coveralls": "^3.0.2",
+    "husky": "^7.0.4",
+    "lerna": "^7.3.0"
+  },
+  "dependencies": {}
+}
