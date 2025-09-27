@@ -1,15 +1,208 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, ExternalLink, Shield, ArrowRight, DollarSign, TrendingUp, Clock, Wallet } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAccount } from 'wagmi';
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { useReadContract } from 'wagmi';
+import { LOAN_CONTRACT_ADDRESS, LOAN_CONTRACT_ABI } from '../../services/loanService';
 
 interface VerifiedStateProps {
   verificationTx?: string;
   linkTx?: string;
 }
 
+// Component to fetch individual loan details from contract
+const LoanDetailsFetcher: React.FC<{
+  loanIds: bigint[];
+  onLoansLoaded: (loans: any[]) => void;
+  onError: (error: string) => void;
+}> = ({ loanIds, onLoansLoaded, onError }) => {
+  const [loadedLoans, setLoadedLoans] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fetch one loan at a time to avoid overwhelming the contract
+  const currentLoanId = loanIds[currentIndex];
+  
+  const { data: loanDetails, isLoading, error } = useReadContract({
+    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    abi: LOAN_CONTRACT_ABI,
+    functionName: 'getLoanDetails',
+    args: currentLoanId ? [currentLoanId] : undefined,
+  });
+
+  useEffect(() => {
+    if (loanDetails && !isLoading && currentLoanId && !isProcessing) {
+      setIsProcessing(true);
+      console.log(`Fetched loan ${currentLoanId}:`, loanDetails);
+      
+      const loanData = {
+        id: currentLoanId,
+        borrower: loanDetails.borrower,
+        amount: loanDetails.amount,
+        interestRate: loanDetails.interestRate,
+        termMonths: loanDetails.termMonths,
+        monthlyPayment: loanDetails.monthlyPayment,
+        totalAmount: loanDetails.totalAmount,
+        remainingBalance: loanDetails.remainingBalance,
+        startTime: loanDetails.startTime,
+        lastPaymentTime: loanDetails.lastPaymentTime,
+        isActive: loanDetails.isActive,
+        isPaidOff: loanDetails.isPaidOff,
+        salaryRange: loanDetails.salaryRange,
+        documentCommitment: loanDetails.documentCommitment
+      };
+      
+      const newLoadedLoans = [...loadedLoans, loanData];
+      setLoadedLoans(newLoadedLoans);
+      
+      // Move to next loan
+      if (currentIndex < loanIds.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+        setIsProcessing(false);
+      } else {
+        // All loans loaded
+        onLoansLoaded(newLoadedLoans);
+      }
+    }
+  }, [loanDetails, isLoading, currentLoanId, currentIndex, loanIds.length, isProcessing]);
+
+  useEffect(() => {
+    if (error) {
+      console.error(`Error fetching loan ${currentLoanId}:`, error);
+      onError(`Failed to fetch loan ${currentLoanId}`);
+    }
+  }, [error, currentLoanId, onError]);
+
+  // Reset when loanIds change
+  useEffect(() => {
+    setLoadedLoans([]);
+    setCurrentIndex(0);
+    setIsProcessing(false);
+  }, [loanIds]);
+
+  return null; // This component doesn't render anything
+};
+
 export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, linkTx }) => {
+  const { address, isConnected } = useAccount();
+  const { address: appKitAddress } = useAppKitAccount();
+  
+  // Use AppKit address if available, otherwise use Wagmi address
+  const connectedAddress = appKitAddress || address;
+  
+  // Real contract data states
+  const [userLoans, setUserLoans] = useState<any[]>([]);
+  const [isLoadingLoans, setIsLoadingLoans] = useState(true);
+  const [loanError, setLoanError] = useState<string | null>(null);
+  
+  // Get user's loan data from contract
+  const { data: userLoansData, isLoading: isLoadingUserLoans } = useReadContract({
+    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    abi: LOAN_CONTRACT_ABI,
+    functionName: 'getUserLoans',
+    args: connectedAddress ? [connectedAddress as `0x${string}`] : undefined,
+  });
+
+  // Load real loan data from contract - no hardcoded data
+  useEffect(() => {
+    if (connectedAddress && !isLoadingUserLoans) {
+      if (userLoansData && Array.isArray(userLoansData) && userLoansData.length > 0) {
+        console.log('Found loan IDs:', userLoansData);
+        // Keep loading until LoanDetailsFetcher completes
+        // Don't set isLoadingLoans to false here
+      } else {
+        console.log('No loans found for user');
+        setUserLoans([]);
+        setIsLoadingLoans(false);
+      }
+    }
+  }, [connectedAddress, userLoansData, isLoadingUserLoans]);
+
+  // Stop loading when we have the final loan data
+  useEffect(() => {
+    if (userLoansData && !isLoadingUserLoans) {
+      if (userLoansData.length === 0) {
+        // No loans, stop loading immediately
+        setIsLoadingLoans(false);
+      } else if (userLoans.length > 0) {
+        // We have loans and loan details are fetched
+        setIsLoadingLoans(false);
+      }
+    }
+  }, [userLoansData, isLoadingUserLoans, userLoans.length]);
+
+  // Fallback timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoadingLoans) {
+        console.log('Loading timeout - stopping loading state');
+        setIsLoadingLoans(false);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isLoadingLoans]);
+
+  // Calculate real loan data - only include ACTIVE and UNPAID loans
+  // Contract logic: applyForLoan() creates loan with isActive=false
+  // Only approveLoan() by owner sets isActive=true and transfers funds
+  const totalBorrowed = userLoans.reduce((sum, loan) => {
+    // Only count loans that are:
+    // 1. isActive = true (approved by owner and funds transferred)
+    // 2. isPaidOff = false (not yet paid back)
+    return loan.isActive && !loan.isPaidOff ? sum + (Number(loan.amount) / 1e6) : sum;
+  }, 0);
+  const creditLimit = 10000; // This could be fetched from contract
+  const availableCredit = creditLimit - totalBorrowed;
+  const creditUtilization = creditLimit > 0 ? (totalBorrowed / creditLimit) * 100 : 0;
+  const creditScore = 750; // This could be calculated based on loan history
+
+  // Debug logging
+  console.log('VerifiedState Debug:', {
+    userLoansData,
+    userLoans,
+    totalBorrowed,
+    creditLimit,
+    availableCredit,
+    creditUtilization,
+    loanCount: userLoans.length,
+    activeUnpaidLoans: userLoans.filter(loan => loan.isActive && !loan.isPaidOff).length,
+    loanStates: userLoans.map(loan => ({
+      id: loan.id,
+      amount: Number(loan.amount) / 1e6,
+      isActive: loan.isActive,
+      isPaidOff: loan.isPaidOff,
+      status: loan.isActive ? (loan.isPaidOff ? 'PAID_OFF' : 'ACTIVE') : 'PENDING_APPROVAL'
+    }))
+  });
+
+  // Show loading overlay when data is being fetched
+  const showLoadingOverlay = isLoadingLoans;
+
   return (
     <div className="min-h-screen py-8 relative bg-black">
+      {/* Fetch real loan details from contract */}
+      {userLoansData && Array.isArray(userLoansData) && userLoansData.length > 0 && (
+        <LoanDetailsFetcher
+          loanIds={userLoansData}
+          onLoansLoaded={setUserLoans}
+          onError={setLoanError}
+        />
+      )}
+
+      {/* Loading Overlay */}
+      {showLoadingOverlay && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-8 max-w-md mx-4 text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <h3 className="text-xl font-semibold text-white mb-2">Loading Your Credit Profile</h3>
+            <p className="text-gray-300 text-sm">
+              Fetching your loan data and calculating credit metrics...
+            </p>
+          </div>
+        </div>
+      )}
       {/* Enhanced background elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-green-500/10 to-emerald-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
@@ -71,7 +264,9 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                       <div className="flex items-center justify-center mx-auto mb-4">
                         <TrendingUp className="w-6 h-6 text-blue-400" />
                       </div>
-                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">$10,000</div>
+                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
+                        {isLoadingLoans ? 'Loading...' : `$${creditLimit.toLocaleString()}`}
+                      </div>
                       <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Credit Limit</p>
                     </div>
                   </div>
@@ -83,7 +278,9 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                       <div className="flex items-center justify-center mx-auto mb-4">
                         <DollarSign className="w-6 h-6 text-orange-400" />
                       </div>
-                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-orange-400 transition-colors">$2,500</div>
+                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-orange-400 transition-colors">
+                        {isLoadingLoans ? 'Loading...' : `$${totalBorrowed.toLocaleString()}`}
+                      </div>
                       <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Currently Borrowed</p>
                     </div>
                   </div>
@@ -95,7 +292,9 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                       <div className="flex items-center justify-center mx-auto mb-4">
                         <Wallet className="w-6 h-6 text-green-400" />
                       </div>
-                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors">$7,500</div>
+                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors">
+                        {isLoadingLoans ? 'Loading...' : `$${availableCredit.toLocaleString()}`}
+                      </div>
                       <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Available Credit</p>
                     </div>
                   </div>
@@ -107,7 +306,9 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                       <div className="flex items-center justify-center mx-auto mb-4">
                         <Shield className="w-6 h-6 text-purple-400" />
                       </div>
-                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">750</div>
+                      <div className="text-2xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                        {isLoadingLoans ? 'Loading...' : creditScore}
+                      </div>
                       <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Credit Score</p>
                     </div>
                   </div>
@@ -119,13 +320,29 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                   <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-6">
                     <h4 className="text-lg font-semibold text-white mb-4">Credit Utilization</h4>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-gray-300 text-sm">25% Used</span>
-                      <span className="text-green-400 text-sm font-medium">Excellent</span>
+                      <span className="text-gray-300 text-sm">
+                        {isLoadingLoans ? 'Loading...' : `${creditUtilization.toFixed(1)}% Used`}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        creditUtilization < 30 ? 'text-green-400' : 
+                        creditUtilization < 70 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>
+                        {isLoadingLoans ? 'Loading...' : 
+                          creditUtilization < 30 ? 'Excellent' : 
+                          creditUtilization < 70 ? 'Good' : 'High Usage'
+                        }
+                      </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
-                      <div className="bg-gradient-to-r from-green-400 to-emerald-400 h-2 rounded-full" style={{width: '25%'}}></div>
+                      <div className={`h-2 rounded-full ${
+                        creditUtilization < 30 ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
+                        creditUtilization < 70 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' :
+                        'bg-gradient-to-r from-red-400 to-red-500'
+                      }`} style={{width: `${Math.min(creditUtilization, 100)}%`}}></div>
                     </div>
-                    <p className="text-gray-400 text-xs">$2,500 of $10,000 credit limit</p>
+                    <p className="text-gray-400 text-xs">
+                      {isLoadingLoans ? 'Loading...' : `$${totalBorrowed.toLocaleString()} of $${creditLimit.toLocaleString()} credit limit`}
+                    </p>
                   </div>
 
                   {/* Current Interest Rate */}
@@ -147,41 +364,46 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                     Recent Borrowing Activity
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-xl p-4">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                        <span className="text-gray-300 text-sm font-medium">Borrowed ₹1,000</span>
+                    {isLoadingLoans ? (
+                      <div className="col-span-3 text-center py-8">
+                        <div className="animate-spin w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full mx-auto mb-2"></div>
+                        <span className="text-gray-400 text-sm">Loading loan activity...</span>
                       </div>
-                      <p className="text-gray-500 text-xs mb-2">Loan ID: #CRD-2024-001</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-xs">2 days ago</span>
-                        <span className="text-green-400 text-xs">+₹1,000</span>
+                    ) : userLoans.length > 0 ? (
+                      userLoans.slice(0, 3).map((loan, index) => (
+                        <div key={index} className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-xl p-4">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              loan.isActive ? (loan.isPaidOff ? 'bg-gray-400' : 'bg-green-400') : 'bg-yellow-400'
+                            }`}></div>
+                            <span className="text-gray-300 text-sm font-medium">
+                              Loan #{loan.id.toString()}
+                            </span>
+                          </div>
+                          <p className="text-gray-500 text-xs mb-2">
+                            Amount: ${(Number(loan.amount) / 1e6).toLocaleString()}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400 text-xs">
+                              {loan.isActive ? (loan.isPaidOff ? 'Paid Off' : 'Active') : 'Pending Approval'}
+                            </span>
+                            <span className={`text-xs ${
+                              loan.isActive ? (loan.isPaidOff ? 'text-gray-400' : 'text-green-400') : 'text-yellow-400'
+                            }`}>
+                              {loan.isActive ? (loan.isPaidOff ? 'PAID' : 'ACTIVE') : 'PENDING'}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center py-8">
+                        <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Wallet className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-gray-400 text-sm">No loan activity yet</p>
+                        <p className="text-gray-500 text-xs mt-1">Apply for your first PYUSD loan to get started</p>
                       </div>
-                    </div>
-                    
-                    <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-xl p-4">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                        <span className="text-gray-300 text-sm font-medium">Income verification</span>
-                      </div>
-                      <p className="text-gray-500 text-xs mb-2">Proof ID: #PRF-2024-002</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-xs">5 days ago</span>
-                        <span className="text-blue-400 text-xs">Verified</span>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-xl p-4">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                        <span className="text-gray-300 text-sm font-medium">Credit limit increased</span>
-                      </div>
-                      <p className="text-gray-500 text-xs mb-2">Update ID: #UPD-2024-003</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-xs">1 week ago</span>
-                        <span className="text-purple-400 text-xs">+₹5,000</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

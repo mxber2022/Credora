@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Progress } from '../ui/Progress';
+import { LoanApplication } from './LoanApplication';
 
 interface ProofGenerationProps {
   userData: {
@@ -16,6 +17,8 @@ interface ProofGenerationProps {
 export function ProofGeneration({ userData, onProofGenerated }: ProofGenerationProps) {
   const [currentStage, setCurrentStage] = useState(0);
   const [proofData, setProofData] = useState<any>(null);
+  const [showLoanApplication, setShowLoanApplication] = useState(false);
+  const [loanId, setLoanId] = useState<number | null>(null);
 
   const stages = [
     { id: 'parsing', label: 'Parsing PDF Content', duration: 1500 },
@@ -55,7 +58,19 @@ export function ProofGeneration({ userData, onProofGenerated }: ProofGenerationP
   }, [currentStage]);
 
   const handleContinue = () => {
+    console.log('Button clicked - handleContinue called');
+    setShowLoanApplication(true);
+  };
+
+  const handleLoanApplied = (appliedLoanId: number) => {
+    console.log('Loan applied:', appliedLoanId);
+    setLoanId(appliedLoanId);
+    // Navigate to lending page after loan application
     onProofGenerated();
+  };
+
+  const handleBackToProof = () => {
+    setShowLoanApplication(false);
   };
 
   const copyProofHash = () => {
@@ -63,6 +78,19 @@ export function ProofGeneration({ userData, onProofGenerated }: ProofGenerationP
   };
 
   const progress = ((currentStage + 1) / stages.length) * 100;
+
+  // Show loan application if proof is generated and user clicked apply
+  if (showLoanApplication && proofData) {
+    return (
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <LoanApplication 
+          proofData={proofData}
+          onLoanApplied={handleLoanApplied}
+          onBack={handleBackToProof}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -215,15 +243,23 @@ export function ProofGeneration({ userData, onProofGenerated }: ProofGenerationP
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleContinue}
-                  className="w-full mt-6"
-                  variant="outline"
-                  size="md"
-                >
-                  <span>Access PYUSD Credit</span>
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="space-y-4">
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full"
+                    variant="outline"
+                    size="md"
+                  >
+                    <span>Apply for PYUSD Loan</span>
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </Button>
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-gray-400">
+                      Your verified income qualifies you for PYUSD lending
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}

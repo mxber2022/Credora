@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { useProofGeneration } from '../../hooks/useProofGeneration';
+import { LoanApplication } from './LoanApplication';
 
 interface UploadSectionProps {
   onProofGenerated?: (proof: any) => void;
@@ -13,6 +14,8 @@ interface UploadSectionProps {
 export function UploadSection({ onProofGenerated }: UploadSectionProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showLoanApplication, setShowLoanApplication] = useState(false);
+  const [loanId, setLoanId] = useState<number | null>(null);
   const { 
     isGenerating, 
     isVerifying, 
@@ -68,6 +71,30 @@ export function UploadSection({ onProofGenerated }: UploadSectionProps) {
     }
   };
 
+  const handleLoanApplied = (appliedLoanId: number) => {
+    console.log('Loan applied:', appliedLoanId);
+    setLoanId(appliedLoanId);
+    // Navigate to lending page after loan application
+    onProofGenerated?.(proof);
+  };
+
+  const handleBackToProof = () => {
+    setShowLoanApplication(false);
+  };
+
+
+  // Show loan application if proof is generated and user clicked apply
+  if (showLoanApplication && proof) {
+    return (
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <LoanApplication 
+          proofData={proof}
+          onLoanApplied={handleLoanApplied}
+          onBack={handleBackToProof}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -203,13 +230,13 @@ export function UploadSection({ onProofGenerated }: UploadSectionProps) {
                   <Button 
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigator.clipboard.writeText(proof?.proof?.Groth16?.encoded_proof || '')}
+                    onClick={() => navigator.clipboard.writeText((proof as any)?.proof?.Groth16?.encoded_proof || (proof as any)?.encoded_proof || '')}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
                 <code className="text-xs text-gray-400 break-all">
-                  {proof?.proof?.Groth16?.encoded_proof || '0x1a2b3c4d5e6f7890abcdef123456789'}
+                  {(proof as any)?.proof?.Groth16?.encoded_proof || (proof as any)?.encoded_proof || '0x1a2b3c4d5e6f7890abcdef123456789'}
                 </code>
               </div>
 
@@ -220,8 +247,8 @@ export function UploadSection({ onProofGenerated }: UploadSectionProps) {
                   <span className="text-sm font-medium text-gray-200">Public Inputs</span>
                 </div>
                 <div className="text-xs text-gray-300 space-y-1">
-                  <div>Input 1: {proof?.proof?.Groth16?.public_inputs?.[0] || 'N/A'}</div>
-                  <div>Input 2: {proof?.proof?.Groth16?.public_inputs?.[1] || 'N/A'}</div>
+                  <div>Input 1: {(proof as any)?.proof?.Groth16?.public_inputs?.[0] || (proof as any)?.publicInputs?.[0] || (proof as any)?.public_inputs?.[0] || 'N/A'}</div>
+                  <div>Input 2: {(proof as any)?.proof?.Groth16?.public_inputs?.[1] || (proof as any)?.publicInputs?.[1] || (proof as any)?.public_inputs?.[1] || 'N/A'}</div>
                 </div>
               </div>
 
@@ -234,13 +261,13 @@ export function UploadSection({ onProofGenerated }: UploadSectionProps) {
             <Button
               onClick={() => {
                 console.log('Access PYUSD Credits button clicked');
-                onProofGenerated?.(proof)} 
-              }
+                setShowLoanApplication(true);
+              }}
               className="w-full mt-6"
               variant="outline"
               size="md"
             >
-              <span>Access PYUSD Credits</span>
+              <span>Apply for PYUSD Loan</span>
               <ExternalLink className="h-4 w-4 ml-2" />
             </Button>
           </div>

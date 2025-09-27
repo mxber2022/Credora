@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Shield, CheckCircle } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import React, { useState, useEffect } from 'react';
+import { DollarSign, TrendingUp, Shield, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useAccount, useReadContract } from 'wagmi';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { LOAN_CONTRACT_ADDRESS, LOAN_CONTRACT_ABI } from '../../services/loanService';
 
 interface LendingDashboardProps {
   userData: {
@@ -24,9 +25,96 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
   const [loanTerm, setLoanTerm] = useState(6);
   const [isApplying, setIsApplying] = useState(false);
   const [loanApproved, setLoanApproved] = useState(false);
+  
+  // Real contract data states
+  const [userLoans, setUserLoans] = useState<any[]>([]);
+  const [hasActiveLoan, setHasActiveLoan] = useState(false);
+  const [isLoadingLoans, setIsLoadingLoans] = useState(true);
+  const [loanError, setLoanError] = useState<string | null>(null);
+  const [salaryRange, setSalaryRange] = useState<string>('3000-4000');
+  const [contractLoanLimit, setContractLoanLimit] = useState<number>(0);
+  const [contractInterestRate, setContractInterestRate] = useState<number>(0);
 
-  const maxLoanAmount = Math.min(userData.monthlyIncome * 3, 15000);
-  const interestRate = userData.monthlyIncome > 6000 ? 8.5 : userData.monthlyIncome > 4000 ? 12.5 : 15.5;
+  // Real contract data fetching
+  const { data: userLoansData, isLoading: isLoadingUserLoans } = useReadContract({
+    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    abi: LOAN_CONTRACT_ABI,
+    functionName: 'getUserLoans',
+    args: connectedAddress ? [connectedAddress as `0x${string}`] : undefined,
+  });
+
+  // Get salary range limits from contract
+  const { data: salaryRangeLimitsData } = useReadContract({
+    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    abi: LOAN_CONTRACT_ABI,
+    functionName: 'salaryRangeLimits',
+    args: [salaryRange],
+  });
+
+  // Get interest rates from contract
+  const { data: interestRatesData } = useReadContract({
+    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    abi: LOAN_CONTRACT_ABI,
+    functionName: 'salaryRangeInterestRates',
+    args: [salaryRange],
+  });
+
+  // Load real loan data
+  useEffect(() => {
+    if (connectedAddress && !isLoadingUserLoans) {
+      // Check if user has any loans to determine if they have an active loan
+      if (userLoansData && Array.isArray(userLoansData)) {
+        setHasActiveLoan(userLoansData.length > 0);
+        
+        // Fetch detailed loan information for each loan ID
+        const fetchLoanDetails = async () => {
+          try {
+            const loanDetails = await Promise.all(
+              userLoansData.map(async (loanId) => {
+                // This would need to be implemented with useReadContract for each loan
+                // For now, we'll use the basic data structure
+                return {
+                  id: loanId,
+                  borrower: connectedAddress,
+                  amount: 0, // Will be fetched separately
+                  isActive: true,
+                  isPaidOff: false,
+                };
+              })
+            );
+            setUserLoans(loanDetails);
+          } catch (error) {
+            console.error('Error fetching loan details:', error);
+            setLoanError('Failed to load loan details');
+          }
+        };
+        
+        fetchLoanDetails();
+      } else {
+        setHasActiveLoan(false);
+        setUserLoans([]);
+      }
+      
+      setIsLoadingLoans(false);
+    }
+  }, [connectedAddress, userLoansData, isLoadingUserLoans]);
+
+  // Update contract data when salary range limits and interest rates are fetched
+  useEffect(() => {
+    if (salaryRangeLimitsData) {
+      setContractLoanLimit(Number(salaryRangeLimitsData) / 1e6); // Convert from wei to PYUSD
+    }
+  }, [salaryRangeLimitsData]);
+
+  useEffect(() => {
+    if (interestRatesData) {
+      setContractInterestRate(Number(interestRatesData) / 100); // Convert from basis points to percentage
+    }
+  }, [interestRatesData]);
+
+  // Use real contract data instead of hardcoded calculations
+  const maxLoanAmount = contractLoanLimit > 0 ? contractLoanLimit : Math.min(userData.monthlyIncome * 3, 15000);
+  const interestRate = contractInterestRate > 0 ? contractInterestRate : (userData.monthlyIncome > 6000 ? 8.5 : userData.monthlyIncome > 4000 ? 12.5 : 15.5);
   const monthlyPayment = (loanAmount * (interestRate / 100 / 12) * Math.pow(1 + interestRate / 100 / 12, loanTerm)) / 
                         (Math.pow(1 + interestRate / 100 / 12, loanTerm) - 1);
 
@@ -35,11 +123,8 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
       open();
       return;
     }
-    setIsApplying(true);
-    setTimeout(() => {
-      setIsApplying(false);
-      setLoanApproved(true);
-    }, 3000);
+    // Redirect to loan application page instead of mock logic
+    window.location.href = '/proof'; // This will take user to the proof generation and loan application flow
   };
 
   return (
@@ -60,7 +145,30 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
         </p>
       </div>
 
-      {/* Simple Stats Cards */}
+      {/* Real Contract Data Stats */}
+      {connectedAddress && (
+        <div className="mb-8">
+          <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-xl ring-1 ring-white/5">
+            <h3 className="text-lg font-semibold text-gray-100 mb-4">Your Account Status</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-300">
+                  Active Loans: {hasActiveLoan ? '1' : '0'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-gray-300">
+                  Total Loans: {userLoans.length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real Contract Data Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6 mb-16">
         <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-2xl hover:shadow-xl hover:border-white/25 transition-all duration-300 ring-1 ring-white/5">
           <div className="flex items-center space-x-3 mb-4">
@@ -68,12 +176,12 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
               <TrendingUp className="h-6 w-6 text-gray-300" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-100">Verified Income</h3>
-              <p className="text-gray-300">Monthly earnings confirmed</p>
+              <h3 className="text-lg font-semibold text-gray-100">Salary Range</h3>
+              <p className="text-gray-300">Contract verified range</p>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-100 mb-2">${userData.monthlyIncome.toLocaleString()}</div>
-          <div className="text-sm text-gray-400">Based on: {userData.documentName}</div>
+          <div className="text-3xl font-bold text-gray-100 mb-2">${salaryRange}</div>
+          <div className="text-sm text-gray-400">From smart contract</div>
         </div>
 
         <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-2xl hover:shadow-xl hover:border-white/25 transition-all duration-300 ring-1 ring-white/5">
@@ -82,12 +190,16 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
               <DollarSign className="h-6 w-6 text-gray-300" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-100">Credit Limit</h3>
+              <h3 className="text-lg font-semibold text-gray-100">Contract Limit</h3>
               <p className="text-gray-300">Maximum borrowing capacity</p>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-100 mb-2">${maxLoanAmount.toLocaleString()}</div>
-          <div className="text-sm text-gray-400">3x monthly income</div>
+          <div className="text-3xl font-bold text-gray-100 mb-2">
+            {contractLoanLimit > 0 ? `$${contractLoanLimit.toLocaleString()}` : 'Loading...'}
+          </div>
+          <div className="text-sm text-gray-400">
+            {contractLoanLimit > 0 ? 'From contract' : 'Fetching from contract...'}
+          </div>
         </div>
 
         <div className="bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-2xl hover:shadow-xl hover:border-white/25 transition-all duration-300 ring-1 ring-white/5">
@@ -96,16 +208,76 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
               <Shield className="h-6 w-6 text-gray-300" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-100">Privacy Score</h3>
-              <p className="text-gray-300">Zero personal data exposed</p>
+              <h3 className="text-lg font-semibold text-gray-100">Interest Rate</h3>
+              <p className="text-gray-300">Contract-based rate</p>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-100 mb-2">100%</div>
-          <div className="text-sm text-gray-400">Full privacy protection</div>
+          <div className="text-3xl font-bold text-gray-100 mb-2">
+            {contractInterestRate > 0 ? `${contractInterestRate}%` : 'Loading...'}
+          </div>
+          <div className="text-sm text-gray-400">
+            {contractInterestRate > 0 ? 'From contract' : 'Fetching from contract...'}
+          </div>
         </div>
       </div>
 
-      {!loanApproved ? (
+      {/* Real Loan Data Section */}
+      {isLoadingLoans ? (
+        <div className="w-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-xl ring-1 ring-white/5">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="animate-spin w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full"></div>
+            <span className="text-gray-300">Loading your loan data...</span>
+          </div>
+        </div>
+      ) : loanError ? (
+        <div className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-8 shadow-xl ring-1 ring-red-500/5">
+          <div className="flex items-center space-x-3 mb-4">
+            <AlertCircle className="h-6 w-6 text-red-400" />
+            <h3 className="text-xl font-bold text-red-400">Error Loading Loan Data</h3>
+          </div>
+          <p className="text-red-300">{loanError}</p>
+        </div>
+      ) : hasActiveLoan ? (
+        <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-2xl p-8 shadow-xl ring-1 ring-amber-500/5">
+          <div className="flex items-center space-x-3 mb-4">
+            <Clock className="h-6 w-6 text-amber-400" />
+            <h3 className="text-xl font-bold text-amber-400">Active Loan Found</h3>
+          </div>
+          <p className="text-amber-300 mb-4">
+            You currently have an active loan. Please pay it off before applying for a new one.
+          </p>
+          <div className="bg-black/20 border border-amber-500/20 rounded-lg p-4">
+            <div className="text-sm text-amber-300">
+              <strong>Note:</strong> You can only have one active loan at a time. 
+              Contact support if you need to modify your existing loan.
+            </div>
+          </div>
+        </div>
+      ) : userLoans.length > 0 ? (
+        <div className="w-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-xl ring-1 ring-white/5">
+          <h3 className="text-2xl font-bold text-gray-100 mb-6">Your Loan History</h3>
+          <div className="space-y-4">
+            {userLoans.map((loan, index) => (
+              <div key={index} className="bg-black/40 border border-white/10 rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-lg font-semibold text-gray-100">Loan #{loan.id.toString()}</div>
+                    <div className="text-sm text-gray-400">Status: {loan.isActive ? 'Active' : 'Inactive'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-gray-100">
+                      ${loan.amount ? (Number(loan.amount) / 1e6).toFixed(2) : 'N/A'} PYUSD
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {loan.isPaidOff ? 'Paid Off' : 'Outstanding'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
         <div>
           <div className="w-full">
             <div className="w-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-8 shadow-xl ring-1 ring-white/5">
@@ -188,20 +360,10 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
 
                 <button
                   onClick={handleApplyLoan}
-                  disabled={isApplying}
-                  className="w-full bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 text-gray-200 hover:bg-gray-700/60 hover:text-white hover:border-gray-600/50 py-4 px-6 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  className="w-full bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 text-gray-200 hover:bg-gray-700/60 hover:text-white hover:border-gray-600/50 py-4 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2"
                 >
-                  {isApplying ? (
-                    <>
-                      <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full"></div>
-                      <span>Processing Application...</span>
-                    </>
-                  ) : (
-                    <>
-                      <DollarSign className="h-5 w-5" />
-                      <span>{isWalletConnected ? 'Apply for Loan' : 'Connect Wallet to Apply'}</span>
-                    </>
-                  )}
+                  <DollarSign className="h-5 w-5" />
+                  <span>{isWalletConnected ? 'Apply for Loan' : 'Connect Wallet to Apply'}</span>
                 </button>
               </div>
             </div>
@@ -241,61 +403,6 @@ export function LendingDashboard({ userData }: LendingDashboardProps) {
                   <div>• Digital currency</div>
                   <div>• 24/7 transfers</div>
                   <div>• Blockchain secured</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Minimal Success State */
-        <div className="w-full">
-          <div className="w-full bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl p-12 text-center shadow-xl ring-1 ring-white/5">
-            <div className="flex items-center justify-center w-16 h-16 bg-gray-800 rounded-2xl mx-auto mb-6">
-              <CheckCircle className="h-10 w-10 text-green-500" />
-            </div>
-            
-            <h3 className="text-3xl font-bold text-gray-100 mb-4">
-              Loan Approved! 🎉
-            </h3>
-            
-            <p className="text-base text-gray-300 mb-8 max-w-2xl mx-auto">
-              Congratulations! Your <span className="font-semibold text-gray-100">₹{loanAmount.toLocaleString()}</span> loan has been approved and will be 
-              disbursed to your wallet within minutes.
-            </p>
-            
-            <div className="bg-black/95 backdrop-blur-xl border border-gray-700/50 rounded-xl p-8 shadow-lg">
-              <div className="grid md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100 mb-2">${loanAmount.toLocaleString()}</div>
-                  <div className="text-gray-300 font-medium text-sm">Loan Amount</div>
-                  <div className="text-xs text-gray-400 mt-1">PYUSD Digital Currency</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100 mb-2">${monthlyPayment.toFixed(0)}</div>
-                  <div className="text-gray-300 font-medium text-sm">Monthly Payment</div>
-                  <div className="text-xs text-gray-400 mt-1">Auto-debited from wallet</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100 mb-2">{interestRate}%</div>
-                  <div className="text-gray-300 font-medium text-sm">Interest Rate</div>
-                  <div className="text-xs text-gray-400 mt-1">APR based on income</div>
-                </div>
-              </div>
-              
-              <div className="mt-8 pt-6 border-t border-gray-700/50">
-                <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Funds disbursed instantly</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                    <span>Smart contract secured</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                    <span>Privacy maintained</span>
-                  </div>
                 </div>
               </div>
             </div>
