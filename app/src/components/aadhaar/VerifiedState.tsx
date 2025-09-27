@@ -269,7 +269,7 @@ export const VerifiedState: React.FC<VerifiedStateProps> = ({ verificationTx, li
                       // Navigate to lending page or trigger borrowing flow
                       window.location.href = '/#lending';
                     }}
-                    className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-lg rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 group"
+                    className="inline-flex items-center px-8 py-4 bg-black/20 backdrop-blur-2xl border border-white/20 text-white font-bold text-lg rounded-2xl transition-all duration-500 shadow-2xl hover:shadow-3xl hover:scale-105 group hover:bg-black/30 hover:border-white/30 hover:text-gray-100 hover:ring-2 hover:ring-white/20"
                   >
                     <span className="mr-3">Borrow PYUSD</span>
                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
