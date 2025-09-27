@@ -11,7 +11,7 @@ const app = express();
 // Initialize Self Protocol verifier
 const selfBackendVerifier = new SelfBackendVerifier(
   "credoraIdentity", // scope - should match frontend
-  "https://2249979f102c.ngrok-free.app", // Replace with your actual ngrok URL
+  "https://22079dba351a.ngrok-free.app", // Replace with your actual ngrok URL
   true, // mockPassport: false = mainnet, true = staging/testnet
   AllIds,
   new DefaultConfigStore({
