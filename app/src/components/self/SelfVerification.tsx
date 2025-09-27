@@ -43,7 +43,7 @@ export function SelfVerification({ onVerificationSuccess, onVerificationError }:
           version: 2,
           appName: appName,
           scope: scope,
-          endpoint: "https://2249979f102c.ngrok-free.app/api/verify",
+          endpoint: "https://22079dba351a.ngrok-free.app/api/verify",
           logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
           userId: address,
         endpointType: "staging_https",  
