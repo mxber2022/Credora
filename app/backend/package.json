@@ -1,0 +1,27 @@
+{
+  "name": "credora-self-backend",
+  "version": "1.0.0",
+  "description": "Self Protocol Backend Verification Service for Credora",
+  "main": "self-verification.js",
+  "scripts": {
+    "start": "node self-verification.js",
+    "dev": "nodemon self-verification.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@selfxyz/core": "^1.1.0-beta.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "self-protocol",
+    "verification",
+    "backend",
+    "credora"
+  ],
+  "author": "Credora Team",
+  "license": "MIT"
+}
