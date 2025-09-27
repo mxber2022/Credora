@@ -222,9 +222,30 @@ function applyForLoan(uint256 amount, uint256 termMonths, bytes32 documentCommit
 function approveLoan(uint256 loanId) external;
 ```
 
-### Contract Addresses (Horizon Testnet)
-- **Loan Contract**: `0x4e6AE06ed9812C007Ec45C6b152389924C405b64`
+### Contract Addresses
+
+#### Active Deployment (zkVerify Integration)
 - **PyUSD Token**: `0x1A463De40d1a508574a0Bd668Fbd063a5f161933`
+- **Loan Contract**: `0x4e6AE06ed9812C007Ec45C6b152389924C405b64`
+- **Network**: Horizon Testnet
+- **Status**: ✅ Funded with 110,000 PyUSD
+- **Usage**: Currently integrated in the application for zkPDF verification
+
+#### Additional Testnets
+
+##### Celo Sepolia
+- **PyUSD Token**: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
+- **Loan Contract**: `0xA0F8E21B7DeafB489563B5428e42d26745c9EA52`
+- **Status**: ✅ Funded with 100,000 PyUSD
+- **Usage**: Available for testing and development
+
+##### Ethereum Sepolia
+- **PyUSD Token**: `[To be deployed]`
+- **Loan Contract**: `[To be deployed]`
+- **Status**: 🔄 Ready for deployment
+- **Usage**: Additional testnet option
+
+All networks are ready for loan applications! 🚀
 
 ## 🧪 Testing
 
