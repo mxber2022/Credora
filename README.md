@@ -12,6 +12,32 @@
 
 Credora is a cutting-edge zero-knowledge borrowing platform that enables users to access undercollateralized loans in PayPal USD (PYUSD) using advanced privacy-preserving technologies. Users can prove their income and identity without revealing sensitive personal information, enabling secure and private access to credit facilities backed by verified income capacity.
 
+## 📋 Contract Addresses
+
+#### Horizon Testnet (Chain ID: 845320009)
+- **Loan Contract**: `0x4e6AE06ed9812C007Ec45C6b152389924C405b64`
+- **PyUSD Token**: `0x1A463De40d1a508574a0Bd668Fbd063a5f161933`
+- **RPC URL**: `https://horizon-testnet.rpc.succinct.xyz`
+
+#### Celo Sepolia (Chain ID: 11142220)
+- **Loan Contract**: `0xA0F8E21B7DeafB489563B5428e42d26745c9EA52`
+- **PyUSD Token**: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
+- **RPC URL**: `https://forno.celo-sepolia.celo-testnet.org`
+
+#### Ethereum Sepolia (Chain ID: 11155111)
+- **Loan Contract**: `0xF50c0F7c0Baa07bB8A2d3730B71639493956611F`
+- **PyUSD Token**: `0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9`
+- **RPC URL**: `https://sepolia.drpc.org`
+
+#### Kadena Testnet (Chain ID: 5920)
+- **Loan Contract**: `0xA0F8E21B7DeafB489563B5428e42d26745c9EA52`
+- **PyUSD Token**: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
+- **RPC URL**: `https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc`
+
+## 🔗 Related Projects
+
+- **zkPDF Template** - [zkPDF Template Repository](https://github.com/mxber2022/zkpdfcredora) for PDF verification and zero-knowledge proof generation
+
 ### 🎯 Key Features
 
 - **🔐 Zero-Knowledge Proofs** - Privacy-preserving income verification without data exposure
@@ -222,27 +248,6 @@ function applyForLoan(uint256 amount, uint256 termMonths, bytes32 documentCommit
 function approveLoan(uint256 loanId) external;
 ```
 
-### Contract Addresses
-
-#### Horizon Testnet (Chain ID: 845320009)
-- **Loan Contract**: `0x4e6AE06ed9812C007Ec45C6b152389924C405b64`
-- **PyUSD Token**: `0x1A463De40d1a508574a0Bd668Fbd063a5f161933`
-- **RPC URL**: `https://horizon-testnet.rpc.succinct.xyz`
-
-#### Celo Sepolia (Chain ID: 11142220)
-- **Loan Contract**: `0xA0F8E21B7DeafB489563B5428e42d26745c9EA52`
-- **PyUSD Token**: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
-- **RPC URL**: `https://forno.celo-sepolia.celo-testnet.org`
-
-#### Ethereum Sepolia (Chain ID: 11155111)
-- **Loan Contract**: `0xF50c0F7c0Baa07bB8A2d3730B71639493956611F`
-- **PyUSD Token**: `0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9`
-- **RPC URL**: `https://sepolia.drpc.org`
-
-#### Kadena Testnet (Chain ID: 5920)
-- **Loan Contract**: `0xA0F8E21B7DeafB489563B5428e42d26745c9EA52`
-- **PyUSD Token**: `0x8fd308C3F8596b5d4b563dc530DD84eBE69da656`
-- **RPC URL**: `https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc`
 
 ## 🧪 Testing
 
@@ -329,7 +334,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Base Protocol** - Layer 2 infrastructure
 - **OpenZeppelin** - Smart contract libraries
 - **Self Protocol** - Identity verification infrastructure
-- **zkPDF Template** - [zkPDF Template Repository](https://github.com/mxber2022/zkpdfcredora) for PDF verification and zero-knowledge proof generation
 
 ## 📞 Support
 
