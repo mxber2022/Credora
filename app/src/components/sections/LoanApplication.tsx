@@ -19,7 +19,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
   const { address, isConnected } = useAccount();
   const [loanAmount, setLoanAmount] = useState('');
   const [termMonths, setTermMonths] = useState('12');
-  const [selectedNetwork, setSelectedNetwork] = useState<'horizon' | 'celoSepolia' | 'ethereumSepolia'>('horizon');
+  const [selectedNetwork, setSelectedNetwork] = useState<'horizon' | 'celoSepolia' | 'ethereumSepolia' | 'kadenaTestnet'>('horizon');
   const [salaryRange, setSalaryRange] = useState('');
   const [maxLoanAmount, setMaxLoanAmount] = useState('0');
   const [interestRate, setInterestRate] = useState('0%');
@@ -519,7 +519,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
             <div className="flex items-center space-x-3">
               <NetworkSelector
                 currentNetwork={selectedNetwork}
-                onNetworkChange={(network) => setSelectedNetwork(network as 'horizon' | 'celoSepolia' | 'ethereumSepolia')}
+                onNetworkChange={(network) => setSelectedNetwork(network as 'horizon' | 'celoSepolia' | 'ethereumSepolia' | 'kadenaTestnet')}
               />
               <Button
                 onClick={onBack}

@@ -368,6 +368,12 @@ export const NETWORK_CONFIG = {
     PYUSD_TOKEN_ADDRESS: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
     CHAIN_ID: 11155111,
     RPC_URL: "https://sepolia.drpc.org"
+  },
+  kadenaTestnet: {
+    LOAN_CONTRACT_ADDRESS: "0xA0F8E21B7DeafB489563B5428e42d26745c9EA52",
+    PYUSD_TOKEN_ADDRESS: "0x8fd308C3F8596b5d4b563dc530DD84eBE69da656",
+    CHAIN_ID: 5920,
+    RPC_URL: "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc"
   }
 };
 

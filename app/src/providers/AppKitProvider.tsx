@@ -39,8 +39,28 @@ const horizonTestnet = defineChain({
   }
 });
 
+// Custom Kadena Testnet configuration
+const kadenaTestnet = defineChain({
+  id: 5920,
+  name: 'Kadena Testnet',
+  network: 'kadena-testnet',
+  nativeCurrency: {
+    decimals: 12,
+    name: 'KDA',
+    symbol: 'KDA'
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc'],
+    }
+  },
+  blockExplorers: {
+    default: {name: 'Kadena Explorer', url: 'http://chain-20.evm-testnet-blockscout.chainweb.com/'}
+  }
+});
+
 // 3. Set the networks
-const networks = [mainnet, arbitrum, horizonTestnet, celoSepolia, sepolia]
+const networks = [mainnet, arbitrum, horizonTestnet, celoSepolia, sepolia, kadenaTestnet]
 
 // 4. Create Wagmi Adapter
 const wagmiAdapter = new WagmiAdapter({

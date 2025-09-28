@@ -27,6 +27,13 @@ const NETWORKS = {
     color: 'from-purple-500 to-violet-500',
     status: 'Available',
     icon: Wifi
+  },
+  kadenaTestnet: {
+    name: 'Kadena Testnet',
+    chainId: 222000222,
+    color: 'from-orange-500 to-red-500',
+    status: 'Available',
+    icon: Wifi
   }
 };
 
