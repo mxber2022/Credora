@@ -4,7 +4,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { CheckCircle, DollarSign, Calendar, Percent, AlertCircle, ArrowLeft } from 'lucide-react';
-import { LoanApplicationData, LOAN_CONTRACT_ADDRESS, LOAN_CONTRACT_ABI, PYUSD_TOKEN_ADDRESS } from '../../services/loanService';
+import { LoanApplicationData, LOAN_CONTRACT_ADDRESS, LOAN_CONTRACT_ABI, PYUSD_TOKEN_ADDRESS, getContractAddresses } from '../../services/loanService';
+import { NetworkSelector } from '../ui/NetworkSelector';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, keccak256, stringToBytes, encodeAbiParameters, parseAbiParameters, decodeEventLog } from 'viem';
 
@@ -18,6 +19,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
   const { address, isConnected } = useAccount();
   const [loanAmount, setLoanAmount] = useState('');
   const [termMonths, setTermMonths] = useState('12');
+  const [selectedNetwork, setSelectedNetwork] = useState<'horizon' | 'celoSepolia' | 'ethereumSepolia'>('horizon');
   const [salaryRange, setSalaryRange] = useState('');
   const [maxLoanAmount, setMaxLoanAmount] = useState('0');
   const [interestRate, setInterestRate] = useState('0%');
@@ -100,9 +102,12 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
   console.log('🔍 Wallet connection status:', { isConnected, address });
   console.log('🔍 WriteContract status:', { isWritePending, writeError, writeData });
   
+  // Get contract addresses for selected network
+  const contractAddresses = getContractAddresses(selectedNetwork);
+
   // Check contract state
   const { data: contractStats } = useReadContract({
-    address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+    address: contractAddresses.LOAN_CONTRACT_ADDRESS as `0x${string}`,
     abi: LOAN_CONTRACT_ABI,
     functionName: 'getContractStats'
   });
@@ -111,7 +116,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
   
   // Check PYUSD token balance of the contract
   const { data: pyusdBalance } = useReadContract({
-    address: PYUSD_TOKEN_ADDRESS as `0x${string}`,
+    address: contractAddresses.PYUSD_TOKEN_ADDRESS as `0x${string}`,
     abi: [
       {
         "inputs": [{"name": "account", "type": "address"}],
@@ -122,7 +127,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
       }
     ],
     functionName: 'balanceOf',
-    args: [LOAN_CONTRACT_ADDRESS as `0x${string}`]
+    args: [contractAddresses.LOAN_CONTRACT_ADDRESS as `0x${string}`]
   });
   
   console.log('💰 Contract PYUSD Balance:', pyusdBalance ? (Number(pyusdBalance) / 1e18).toFixed(2) + ' PYUSD' : 'Loading...');
@@ -321,7 +326,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
       try {
         // Call verifySalaryProof first
         await writeContract({
-          address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+          address: contractAddresses.LOAN_CONTRACT_ADDRESS as `0x${string}`,
           abi: LOAN_CONTRACT_ABI,
           functionName: 'verifySalaryProof',
           args: [publicValues as `0x${string}`, proofBytes as `0x${string}`]
@@ -369,7 +374,7 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
       
       try {
         const result = await writeContract({
-          address: LOAN_CONTRACT_ADDRESS as `0x${string}`,
+          address: contractAddresses.LOAN_CONTRACT_ADDRESS as `0x${string}`,
           abi: LOAN_CONTRACT_ABI,
           functionName: 'applyForLoan',
           args: [
@@ -511,14 +516,20 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
                 <div className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors duration-300">Secure Lending Platform</div>
               </div>
             </div>
-            <Button
-              onClick={onBack}
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white"
-            >
-              ← Back
-            </Button>
+            <div className="flex items-center space-x-3">
+              <NetworkSelector
+                currentNetwork={selectedNetwork}
+                onNetworkChange={(network) => setSelectedNetwork(network as 'horizon' | 'celoSepolia' | 'ethereumSepolia')}
+              />
+              <Button
+                onClick={onBack}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white"
+              >
+                ← Back
+              </Button>
+            </div>
           </div>
           
           <div className="space-y-6">
@@ -576,20 +587,33 @@ export function LoanApplication({ proofData, onLoanApplied, onBack }: LoanApplic
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Loan Term (Months)
+              <label className="block text-sm font-medium text-gray-300 mb-3 group">
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center w-5 h-5 bg-black/40 border border-white/10 rounded-lg shadow-inner">
+                    <Calendar className="h-3 w-3 text-emerald-400" />
+                  </div>
+                  <span className="text-gray-300 group-hover:text-white transition-colors duration-300">
+                    Loan Term (Months)
+                  </span>
+                </div>
               </label>
-              <select
-                value={termMonths}
-                onChange={(e) => setTermMonths(e.target.value)}
-                className="w-full px-3 py-2 bg-black/20 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-              >
-                <option value="6">6 months</option>
-                <option value="12">12 months</option>
-                <option value="18">18 months</option>
-                <option value="24">24 months</option>
-                <option value="36">36 months</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={termMonths}
+                  onChange={(e) => setTermMonths(e.target.value)}
+                  className="w-full px-4 py-3 bg-black/20 backdrop-blur-2xl border border-white/15 rounded-2xl text-white shadow-2xl hover:shadow-3xl transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/30 appearance-none cursor-pointer"
+                >
+                  <option value="6" className="bg-black/80 text-white">6 months</option>
+                  <option value="12" className="bg-black/80 text-white">12 months</option>
+                  <option value="18" className="bg-black/80 text-white">18 months</option>
+                  <option value="24" className="bg-black/80 text-white">24 months</option>
+                  <option value="36" className="bg-black/80 text-white">36 months</option>
+                </select>
+                {/* Custom dropdown arrow */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                  <div className="w-2 h-2 border-r-2 border-b-2 border-gray-400 rotate-45 transform"></div>
+                </div>
+              </div>
             </div>
 
             {/* Monthly Payment Preview */}

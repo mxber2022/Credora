@@ -349,6 +349,33 @@ export const LOAN_CONTRACT_ABI = [
   }
 ] as const;
 
-// Contract address - DEPLOYED ON HORIZON TESTNET
-export const LOAN_CONTRACT_ADDRESS = "0x4e6AE06ed9812C007Ec45C6b152389924C405b64"; // SalaryBasedLoanContract
-export const PYUSD_TOKEN_ADDRESS = "0x1A463De40d1a508574a0Bd668Fbd063a5f161933"; // PyUSD Token
+// Network-specific contract addresses
+export const NETWORK_CONFIG = {
+  horizon: {
+    LOAN_CONTRACT_ADDRESS: "0x4e6AE06ed9812C007Ec45C6b152389924C405b64",
+    PYUSD_TOKEN_ADDRESS: "0x1A463De40d1a508574a0Bd668Fbd063a5f161933",
+    CHAIN_ID: 845320009,
+    RPC_URL: "https://horizon-testnet.rpc.succinct.xyz"
+  },
+  celoSepolia: {
+    LOAN_CONTRACT_ADDRESS: "0xA0F8E21B7DeafB489563B5428e42d26745c9EA52",
+    PYUSD_TOKEN_ADDRESS: "0x8fd308C3F8596b5d4b563dc530DD84eBE69da656",
+    CHAIN_ID: 11142220,
+    RPC_URL: "https://forno.celo-sepolia.celo-testnet.org"
+  },
+  ethereumSepolia: {
+    LOAN_CONTRACT_ADDRESS: "0xF50c0F7c0Baa07bB8A2d3730B71639493956611F",
+    PYUSD_TOKEN_ADDRESS: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+    CHAIN_ID: 11155111,
+    RPC_URL: "https://sepolia.drpc.org"
+  }
+};
+
+// Default to Horizon Testnet (current active network)
+export const LOAN_CONTRACT_ADDRESS = NETWORK_CONFIG.horizon.LOAN_CONTRACT_ADDRESS;
+export const PYUSD_TOKEN_ADDRESS = NETWORK_CONFIG.horizon.PYUSD_TOKEN_ADDRESS;
+
+// Network selection helper
+export const getContractAddresses = (network: keyof typeof NETWORK_CONFIG = 'horizon') => {
+  return NETWORK_CONFIG[network];
+};
